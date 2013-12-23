@@ -1,0 +1,35 @@
+<?php
+
+/**
+ * @file i18n_extras.module
+ * TODO: Enter file description here.
+ */
+
+
+/**
+ * Implements hook_language_switch_links_alter().
+ */
+function i18n_extras_language_switch_links_alter(array &$links, $type, $path) {
+  // Set language switcher links to langcode.
+  foreach ($links as $langcode => $link) {
+    $links[$langcode]['title'] = $langcode;
+  }
+
+  // Add untranslated class to non-translated nodes.
+  if (preg_match('/^node\/(\d+)/', $path, $matches) && !empty($matches)) {
+    $node = node_load($matches[1]);
+    if (!isset($node->tnid)) {
+      return;
+    }
+    if (!($translations = translation_node_get_translations($node->tnid))) {
+      return;
+    }
+    $translations = array_keys($translations);
+    foreach ($links as $langcode => $link) {
+      if (!in_array($langcode, $translations)) {
+        $links[$langcode]['attributes']['class'][] = 'locale-untranslated';
+      }
+    }
+  }
+}
+

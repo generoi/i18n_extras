@@ -1,0 +1,5 @@
+name = Internationalization extras
+description = Additional configurations for i18n
+dependencies[] = i18n
+package = custom
+core = 7.x
