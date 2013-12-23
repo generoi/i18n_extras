@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function i18n_extras_install() {
+  // Set module weight to load after i18n_taxonomy and core but before views.
+  // The reason is we supply a different options_list_callback for
+  // taxonomy_term_reference fields so that it uses entity_label() and
+  // therefore gets translated in forms.
+  //
+  // The title module does this but has a lower weight.
+  //
+  // @see i18n_taxonomy_install().
+  // @see https://drupal.org/node/1920096#comment-7988401
+  db_query("UPDATE {system} SET weight = 6 WHERE name = 'i18n_extras' AND type = 'module'");
+}
