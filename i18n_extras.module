@@ -66,35 +66,6 @@ function i18n_extras_language_switch_links_alter(array &$links, $type, $path) {
 }
 
 /**
- * Implements hook_entity_query_alter().
- *
- * Limit entityreference to nodes of same language as parent node.
- *
- * @see http://drupal.org/node/1462766
- */
-function i18n_extras_entity_query_alter($query) {
-  if (in_array('entityreference', $query->tags)) {
-    $langcode = NULL;
-    // AJAX callback: entityreference/autocomplete/tags/field_related/node/faq/7371/test
-    if (arg(0) == 'entityreference') {
-      if (($nid = arg(6)) && is_numeric($nid)) {
-        $node = node_load($nid);
-        $langcode = $node->language;
-      }
-    }
-    else {
-      $lang = i18n_node_i18n_context_language();
-      if (!empty($lang->language)) {
-        $langcode = $lang->language;
-      }
-    }
-    if (!empty($langcode)) {
-      $query->propertyCondition('language', $langcode);
-    }
-  }
-}
-
-/**
  * Implements hook_field_info_alter().
  *
  * Display terms in correct language on node forms.
