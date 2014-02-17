@@ -130,30 +130,30 @@ function i18n_extras_taxonomy_allowed_values($field) {
     $options = array();
     // Node language on edit
     $node_language = i18n_node_i18n_context_language();
-    // Node add form fallback to the page language.
+    // For node ad, simply use i18n_taxonomy.
     if (!isset($node_language)) {
-      global $language;
-      $node_language = $language;
+      $options += i18n_taxonomy_allowed_values($field);
     }
-
-    foreach ($field['settings']['allowed_values'] as $tree) {
-      if ($vocabulary = taxonomy_vocabulary_machine_name_load($tree['vocabulary'])) {
-        switch ($vocabulary->i18n_mode) {
-          case I18N_MODE_NONE:
-            $options += taxonomy_allowed_values($field);
-            break;
-          case I18N_MODE_LOCALIZE:
-          case I18N_MODE_LANGUAGE:
-            $options += i18n_taxonomy_allowed_values($field);
-            break;
-          case I18N_MODE_TRANSLATE:
-          case I18N_MODE_MULTIPLE:
-            if ($terms = i18n_taxonomy_get_tree($vocabulary->vid, $node_language->language, $tree['parent'])) {
-              foreach ($terms as $term) {
-                $options[$term->tid] = str_repeat('-', $term->depth) . i18n_taxonomy_term_name($term);
+    else {
+      foreach ($field['settings']['allowed_values'] as $tree) {
+        if ($vocabulary = taxonomy_vocabulary_machine_name_load($tree['vocabulary'])) {
+          switch ($vocabulary->i18n_mode) {
+            case I18N_MODE_NONE:
+              $options += taxonomy_allowed_values($field);
+              break;
+            case I18N_MODE_LOCALIZE:
+            case I18N_MODE_LANGUAGE:
+              $options += i18n_taxonomy_allowed_values($field);
+              break;
+            case I18N_MODE_TRANSLATE:
+            case I18N_MODE_MULTIPLE:
+              if ($terms = i18n_taxonomy_get_tree($vocabulary->vid, $node_language->language, $tree['parent'])) {
+                foreach ($terms as $term) {
+                  $options[$term->tid] = str_repeat('-', $term->depth) . i18n_taxonomy_term_name($term);
+                }
               }
-            }
-            break;
+              break;
+          }
         }
       }
     }
