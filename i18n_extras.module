@@ -162,3 +162,99 @@ function i18n_extras_taxonomy_allowed_values($field) {
 
   return taxonomy_allowed_values($field);
 }
+
+/**
+ * Implements hook_field_attach_presave().
+ *
+ * While creating NEW content in a different than the UI the taxonomoy terms
+ * and the entityreferences will be in the UI language and also saved thusly.
+ * Here we hook in to the entity creations and automatically change taxonomy
+ * terms and entity references to the translated version in the same language
+ * as the parent entity (the NEW content).
+ *
+ * Limitations:
+ * - Only node references are support for entityreference targets.
+ */
+function i18n_extras_field_attach_presave($entity_type, $entity) {
+  list($entity_id, , $bundle) = entity_extract_ids($entity_type, $entity);
+  // Only act on new entities
+  if (isset($entity->is_new) || isset($entity_id)) {
+    return;
+  }
+  $fields_info = field_info_instances($entity_type, $bundle);
+  $parent_langcode = entity_language($entity_type, $entity);
+  foreach ($fields_info as $field_name => $value) {
+    $field_info = field_info_field($field_name);
+    $field_langcode = field_language($entity_type, $entity, $field_name);
+    if (!isset($entity->{$field_name}[$field_langcode])) {
+      continue;
+    }
+    switch ($field_info['type']) {
+      case 'taxonomy_term_reference':
+        $term_ids = array();
+        // Map of tid => field_index
+        $term_map = array();
+        // Gather all term ids referenced.
+        foreach ($entity->{$field_name}[$field_langcode] as $idx => $field_item) {
+          $tid = $field_item['tid'];
+          $term_ids[] = $tid;
+          $term_map[$tid] = $idx;
+        }
+        $terms = taxonomy_term_load_multiple($term_ids);
+        foreach ($terms as $term) {
+          // If a term reference is in the wrong language.
+          if (entity_language('taxonomoy_term', $term) != $parent_langcode) {
+            // If a term translation exists
+            if ($translated_tid = i18n_taxonomy_translation_term_tid($term->tid, $parent_langcode)) {
+              $idx = $term_map[$term->tid];
+              // Change the term reference to point to the correct translation.
+              $entity->{$field_name}[$field_langcode][$idx]['tid'] = $translated_tid;
+            }
+          }
+        }
+        break;
+      case 'entityreference':
+        $entity_ids = array();
+        // Map of target_id => field_index
+        $entity_map = array();
+        // Gather all entity reference ids.
+        foreach ($entity->{$field_name}[$field_langcode] as $idx => $field_item) {
+          $entity_id = $field_item['target_id'];
+          $entity_ids[] = $entity_id;
+          $entity_map[$entity_id] = $idx;
+        }
+        // The entity type this field references.
+        $target_type = $field_info['settings']['target_type'];
+        // Currently we only support nodes.
+        if ($target_type != 'node') {
+          continue;
+        }
+        $references = entity_load($target_type, $entity_ids);
+        foreach ($references as $entity_reference) {
+          // The original entity reference id.
+          $entity_reference_id = entity_id($target_type, $entity_reference);
+          // If the referenced entity is in a different language than the parent.
+          if (entity_language($target_type, $entity_reference) != $parent_langcode) {
+            $translations = array();
+            switch ($target_type) {
+              case 'node':
+                // Skip referenced entities without a translation set.
+                if (empty($entity_reference->tnid)) {
+                  continue;
+                }
+                $translations = translation_node_get_translations($entity_reference->tnid);
+                break;
+            }
+            // If the referenced entity has a translation in the parents language.
+            if (isset($translations[$parent_langcode])) {
+              $translated_entity_id = entity_id($target_type, $translations[$parent_langcode]);
+              $idx = $entity_map[$entity_reference_id];
+              // Change the target of the entity reference to the translated version
+              $entity->{$field_name}[$field_langcode][$idx]['target_id'] = $translated_entity_id;
+            }
+          }
+        }
+        break;
+    }
+  }
+}
