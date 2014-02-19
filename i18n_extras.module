@@ -59,6 +59,8 @@ function i18n_extras_language_switch_links_alter(array &$links, $type, $path) {
     $translations = array_keys($translations);
     foreach ($links as $langcode => $link) {
       if (!in_array($langcode, $translations)) {
+        // Remove the href so that theme_links outputs a span element instead.
+        unset($links[$langcode]['href']);
         $links[$langcode]['attributes']['class'][] = 'locale-untranslated';
       }
     }
