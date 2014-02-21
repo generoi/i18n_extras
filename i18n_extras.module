@@ -53,8 +53,9 @@ function i18n_extras_language_switch_links_alter(array &$links, $type, $path) {
     if (!isset($node->tnid)) {
       return;
     }
+    // If no translation set exists, set it to the nodes current language.
     if (!($translations = translation_node_get_translations($node->tnid))) {
-      return;
+      $translations[$node->language] = $node->language;
     }
     $translations = array_keys($translations);
     foreach ($links as $langcode => $link) {
@@ -259,4 +260,67 @@ function i18n_extras_field_attach_presave($entity_type, $entity) {
         break;
     }
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * When saving a taxonomy term in a language other than the admin UI language,
+ * the relation (parent) value resets as it's not translated.
+ */
+function i18n_extras_form_taxonomy_form_term_alter(&$form, &$form_state, $edit, $vocabulary) {
+  if (isset($form_state['confirm_delete']) || variable_get('taxonomy_override_selector', FALSE)) {
+    return;
+  }
+
+  $term = (object) $form['#term'];
+  $vocabulary = $form['#vocabulary'];
+  $tid = $term->tid;
+  $langcode = $term->language;
+
+  // Only continue if the admin language is different from the term language.
+  if ($langcode == i18n_select_langcodes()) {
+    return;
+  }
+
+  // @see taxonomy_get_parents().
+  $query = db_select('taxonomy_term_data', 't');
+  $query->join('taxonomy_term_hierarchy', 'h', 'h.parent = t.tid');
+  $query->addField('t', 'tid');
+  $query->condition('h.tid', $tid);
+  // Remove query tag which i18n_select alters.
+  // $query->addTag('term_access');
+  $query->orderBy('t.weight');
+  $query->orderBy('t.name');
+  $tids = $query->execute()->fetchCol();
+  $parents = taxonomy_term_load_multiple($tids);
+
+  $parent = array_keys($parents);
+  $form['#term']['parent'] = $parent;
+
+  $children = i18n_taxonomy_get_tree($vocabulary->vid, $langcode, $term->tid);
+
+  // A term can't be the child of itself, nor of its children.
+  foreach ($children as $child) {
+    $exclude[] = $child->tid;
+  }
+  $exclude[] = $term->tid;
+
+  $tree = i18n_taxonomy_get_tree($vocabulary->vid, $langcode);
+  $options = array('<' . t('root') . '>');
+  if (empty($parent)) {
+    $parent = array(0);
+  }
+  foreach ($tree as $item) {
+    if (!in_array($item->tid, $exclude)) {
+      $options[$item->tid] = str_repeat('-', $item->depth) . $item->name;
+    }
+  }
+  $form['relations']['parent'] = array(
+    '#type' => 'select',
+    '#title' => t('Parent terms'),
+    '#options' => $options,
+    '#default_value' => $parent,
+    '#multiple' => TRUE,
+  );
 }
