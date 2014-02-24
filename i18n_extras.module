@@ -276,6 +276,9 @@ function i18n_extras_form_taxonomy_form_term_alter(&$form, &$form_state, $edit, 
   $term = (object) $form['#term'];
   $vocabulary = $form['#vocabulary'];
   $tid = $term->tid;
+  if (i18n_taxonomy_vocabulary_mode($vocabulary) == I18N_MODE_LOCALIZE) {
+    return;
+  }
   $langcode = $term->language;
 
   // Only continue if the admin language is different from the term language.
