@@ -8,6 +8,8 @@ Internationalization extras
 - Add WYSIWYG to string translation pages.
 - Fix taxonomy term relations resetting when editing a term in a language
   different than the admin UI.
+- Redirect the users translating beans so they use the admin language in the
+  bean language.
 
 Installation
 ------------

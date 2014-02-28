@@ -330,3 +330,24 @@ function i18n_extras_form_taxonomy_form_term_alter(&$form, &$form_state, $edit, 
     '#multiple' => TRUE,
   );
 }
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function i18n_extras_form_bean_form_alter(&$form) {
+  global $language;
+  $page_language = $language->language;
+  $bean_language = arg(3);
+  // If editing a bean in another translation than the admin language,
+  // i18n_select resets node/term references.
+  // Therefore we redirect the user to the form in the beans admin language.
+  if (arg(2) == 'edit' && !empty($bean_language) && $bean_language != $page_language) {
+    $language_list = language_list();
+    if (!isset($language_list[$bean_language])) {
+      return;
+    }
+    $language = $language_list[$bean_language];
+    list(,$path) = language_url_split_prefix($_GET['q'], $language_list);
+    drupal_goto($path, array('language' => $language));
+  }
+}
