@@ -3,6 +3,5 @@ description = Additional configurations for i18n
 dependencies[] = i18n
 dependencies[] = i18n_taxonomy
 dependencies[] = i18n_node
-dependencies[] = i18n_select
 package = custom
 core = 7.x
