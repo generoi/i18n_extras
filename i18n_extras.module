@@ -13,8 +13,17 @@
  */
 function i18n_extras_form_i18n_string_translate_page_form_alter(&$form, &$form_state) {
   foreach ($form['strings']['all'] as $name => $field) {
-    if (preg_match('/blocks:block:[0-9]+:body/i', $name)) {
-      // Change textarea to text_format
+    $block_title = preg_match('/blocks:block:[0-9]+:title/i' , $name);
+    $term_title = preg_match('/taxonomy:(vocabulary|term):[0-9]+:name/i' , $name);
+    $vocabulary_description = preg_match('/taxonomy:vocabulary:[0-9]+:description/i' , $name);
+    $block_body = preg_match('/blocks:block:[0-9]+:body/i' , $name);
+    $term_description = preg_match('/taxonomy:term:[0-9]+:description/i' , $name);
+
+    if ($block_title || $term_title || $vocabulary_description) {
+      $form['strings']['all'][$name]['#type'] = 'textfield';
+    }
+    // Change textarea to text_format
+    else if ($block_body || $term_description) {
       $form['strings']['all'][$name]['#type'] = 'text_format';
       $form['strings']['all'][$name]['#description'] = '<br/>';
     }
@@ -30,9 +39,11 @@ function i18n_extras_form_i18n_string_translate_page_form_alter(&$form, &$form_s
  * @see i18n_extras_form_i18n_string_translate_page_form_alter().
  */
 function i18n_extras_string_translate_page_form_submit($form, &$form_state) {
-  //Remove wysiwyg format because i18n cant handle it
+  // Remove wysiwyg format because i18n cant handle it
   foreach ($form_state['values']['strings'] as $name => $field) {
-    if (preg_match('/blocks:block:[0-9]+:body/i',$name)) {
+    $block_body = preg_match('/blocks:block:[0-9]+:body/i' , $name);
+    $term_description = preg_match('/taxonomy:term:[0-9]+:description/i' , $name);
+    if ($block_body || $term_description) {
       unset($form_state['values']['strings'][$name]['format']);
     }
   }
