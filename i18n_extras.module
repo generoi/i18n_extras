@@ -362,3 +362,24 @@ function i18n_extras_form_bean_form_alter(&$form) {
     drupal_goto($path, array('language' => $language));
   }
 }
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function i18n_extras_form_node_form_alter(&$form, $form_state) {
+  global $language;
+  $page_language = $language->language;
+  $node_language = $form_state['node']->language;
+  // If editing a node in another language than the admin language,
+  // entityreference doesnt autocomplete the correct language.
+  // Therefore we redirect the user to the form in the nodes admin language.
+  if (arg(2) == 'edit' && !empty($node_language) && $node_language != $page_language) {
+    $language_list = language_list();
+    if (!isset($language_list[$node_language])) {
+      return;
+    }
+    $language = $language_list[$node_language];
+    list(,$path) = language_url_split_prefix($_GET['q'], $language_list);
+    drupal_goto($path, array('language' => $language));
+  }
+}
