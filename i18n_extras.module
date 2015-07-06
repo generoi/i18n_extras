@@ -77,6 +77,43 @@ function i18n_extras_language_switch_links_alter(array &$links, $type, $path) {
       }
     }
   }
+  // Remove links to untranslated terms.
+  // @see i18n_extras_i18n_translate_path_alter().
+  else if (preg_match('/^taxonomy\/term\/(\d+)/', $path, $matches) && !empty($matches)) {
+    if (module_exists('i18n_taxonomy')) {
+      $term = taxonomy_term_load($matches[1]);
+      foreach ($links as $langcode => $link) {
+        $translated_term = i18n_taxonomy_term_get_translation($term, $langcode);
+        if (empty($translated_term)) {
+          unset($links[$langcode]['href']);
+          $links[$langcode]['attributes']['class'][] = 'locale-untranslated';
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_i18n_translate_path_alter().
+ *
+ * Remove invalid taxonomt term translations. This is required for the language
+ * switcher block, due to i18n running after this module.
+ *
+ * @see i18n_extras_language_switch_links_alter().
+ */
+function i18n_extras_i18n_translate_path_alter(&$translations, $path) {
+  if (!module_exists('i18n_taxonomy')) {
+    return;
+  }
+  if (preg_match('/^taxonomy\/term\/(\d+)/', $path, $matches) && !empty($matches)) {
+    $term = taxonomy_term_load($matches[1]);
+    foreach ($translations as $langcode => $translation) {
+      $translated_term = i18n_taxonomy_term_get_translation($term, $langcode);
+      if (empty($translated_term)) {
+        unset($translations[$langcode]);
+      }
+    }
+  }
 }
 
 /**
