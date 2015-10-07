@@ -419,4 +419,20 @@ function i18n_extras_form_node_form_alter(&$form, $form_state) {
     list(,$path) = language_url_split_prefix($_GET['q'], $language_list);
     drupal_goto($path, array('language' => $language));
   }
+  // If we're translating a new node, add a callback that forces the language.
+  elseif (arg(1) == 'add' && !empty($_GET['target']) && i18n_node_type_enabled($form['#node'])) {
+    $form['#after_build'][] = '_i18n_extras_form_node_form_build';
+  }
+}
+
+/**
+ * Form build callback; Force the language of a new node translation.
+ *
+ * For whatever reason this value can be reset to the source language.
+ */
+function _i18n_extras_form_node_form_build($form, &$form_state) {
+  if (in_array($_GET['target'], array_keys($form['language']['#options']))) {
+    $form['language']['#default_value'] = $form['language']['#value'] = $_GET['target'];
+  }
+  return $form;
 }
